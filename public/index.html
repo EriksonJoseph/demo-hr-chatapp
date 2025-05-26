@@ -62,9 +62,38 @@
         
         .chat-container {
             flex: 1;
+            display: flex;
+            flex-direction: column;
             padding: 20px;
-            overflow-y: auto;
+            overflow: hidden;
             background: #f5f7fb;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-bottom: 15px;
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom scrollbar for messages */
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
         
         .message {
@@ -387,13 +416,14 @@
                 <div class="title">แชทสอบถามข้อมูล HR</div>
             </div>
             
-            <div class="chat-container" id="messageContainer">
-                <!-- Messages will be added here -->
-            </div>
-            
-            <div class="input-area">
-                <input type="text" id="messageInput" class="message-input" placeholder="พิมพ์ข้อความ...">
-                <button id="sendButton" class="send-button">ส่ง</button>
+            <div class="chat-container">
+                <div class="messages-container" id="messagesContainer">
+                    <!-- Messages will be added here -->
+                </div>
+                <div class="input-area">
+                    <input type="text" id="messageInput" class="message-input" placeholder="พิมพ์ข้อความที่นี่...">
+                    <button id="sendButton" class="send-button">ส่ง</button>
+                </div>
             </div>
         </div>
     </div>
@@ -406,7 +436,7 @@
         // DOM Elements
         const loginContainer = document.getElementById('loginContainer');
         const chatContainer = document.getElementById('chatContainer');
-        const messageContainer = document.getElementById('messageContainer');
+        const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const loginButton = document.getElementById('loginButton');
@@ -426,7 +456,7 @@
             const welcomeMessage = document.createElement('div');
             welcomeMessage.className = 'message message-bot';
             welcomeMessage.textContent = `สวัสดีคุณ${currentEmployee.name} ฉันคือระบบแชทบอทของ HR ยินดีให้บริการค่ะ\n\nคุณสามารถสอบถามข้อมูลเกี่ยวกับการทำงาน การลา หรือเงินเดือนของคุณได้ค่ะ`;
-            messageContainer.appendChild(welcomeMessage);
+            messagesContainer.appendChild(welcomeMessage);
             scrollToBottom();
         }
         
@@ -527,34 +557,29 @@
         
         // Add user message to chat
         function addUserMessage(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message message-user';
-            messageElement.textContent = message;
-            messageContainer.appendChild(messageElement);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-user';
+            messageDiv.textContent = message;
+            messagesContainer.appendChild(messageDiv);
             scrollToBottom();
         }
         
         // Add bot message to chat
         function addBotMessage(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message message-bot';
-            messageElement.textContent = message;
-            messageContainer.appendChild(messageElement);
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message message-bot';
+            messageDiv.textContent = message;
+            messagesContainer.appendChild(messageDiv);
             scrollToBottom();
         }
         
         // Show typing indicator
         function showTypingIndicator() {
-            const indicator = document.createElement('div');
-            indicator.className = 'typing-indicator';
-            indicator.id = 'typingIndicator';
-            
-            for (let i = 0; i < 3; i++) {
-                const dot = document.createElement('span');
-                indicator.appendChild(dot);
-            }
-            
-            messageContainer.appendChild(indicator);
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'message message-bot';
+            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            messagesContainer.appendChild(typingDiv);
             scrollToBottom();
         }
         
@@ -568,7 +593,7 @@
         
         // Scroll to bottom of chat
         function scrollToBottom() {
-            messageContainer.scrollTop = messageContainer.scrollHeight;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
         
         // Show login error
