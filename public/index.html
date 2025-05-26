@@ -12,22 +12,30 @@
             padding: 0;
         }
         
+        html, body {
+            height: 99%;
+            overflow: hidden;
+        }
+        
         body {
             font-family: 'Sarabun', sans-serif;
             background: #f5f7fb;
             color: #333;
             line-height: 1.6;
+            padding-top: 20px;
+            padding-bottom: 20px;
         }
         
         .container {
             max-width: 1000px;
-            margin: 30px auto;
+            margin: 0 auto;
             background: #fff;
             border-radius: 15px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             display: flex;
-            min-height: 80vh;
+            height: 100vh;
+            max-height: 100vh;
         }
         
         .sidebar {
@@ -37,12 +45,16 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
         }
         
         .main-content {
             flex: 1;
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            min-width: 0;
         }
         
         .header {
@@ -52,6 +64,7 @@
             align-items: center;
             justify-content: space-between;
             background: #fff;
+            flex-shrink: 0;
         }
         
         .title {
@@ -62,44 +75,30 @@
         
         .chat-container {
             flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f5f7fb;
+            height: 0; /* This forces the flex item to respect flex: 1 */
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            overflow: hidden;
-            background: #f5f7fb;
         }
         
-        .messages-container {
+        .messages-wrapper {
             flex: 1;
-            overflow-y: auto;
-            padding-right: 10px;
-            margin-bottom: 15px;
-            scroll-behavior: smooth;
-        }
-        
-        /* Custom scrollbar for messages */
-        .messages-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .messages-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        .messages-container::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
-        }
-        
-        .messages-container::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
         
         .message {
-            margin-bottom: 15px;
             max-width: 80%;
             word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .message-user {
@@ -123,6 +122,7 @@
             padding: 15px;
             background: #fff;
             border-top: 1px solid #eee;
+            flex-shrink: 0;
         }
         
         .message-input {
@@ -134,6 +134,8 @@
             outline: none;
             transition: border 0.3s;
             font-family: 'Sarabun', sans-serif;
+            resize: none;
+            max-height: 100px;
         }
         
         .message-input:focus {
@@ -151,10 +153,16 @@
             transition: background 0.3s;
             font-family: 'Sarabun', sans-serif;
             font-weight: 500;
+            flex-shrink: 0;
         }
         
         .send-button:hover {
             background: #303f9f;
+        }
+        
+        .send-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
         }
         
         .login-container {
@@ -164,6 +172,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            height: 100vh;
         }
         
         .login-form {
@@ -230,6 +239,7 @@
             padding: 15px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
+            flex-shrink: 0;
         }
         
         .employee-name {
@@ -299,6 +309,7 @@
             cursor: pointer;
             transition: background 0.3s;
             font-family: 'Sarabun', sans-serif;
+            margin-top: 10px;
         }
         
         .logout-button:hover {
@@ -320,11 +331,15 @@
                 margin: 0;
                 height: 100vh;
                 border-radius: 0;
+                max-width: none;
             }
             
             .sidebar {
                 width: 100%;
-                min-height: 200px;
+                height: auto;
+                min-height: 0;
+                max-height: 200px;
+                overflow-y: auto;
             }
             
             .info-section {
@@ -335,12 +350,25 @@
                 margin-bottom: 15px;
                 font-size: 1.5em;
             }
+            
+            .main-content {
+                height: calc(100vh - 200px);
+            }
+            
+            .chat-container {
+                height: calc(100vh - 320px);
+            }
         }
         
         .typing-indicator {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            max-width: 80%;
+            background: white;
+            border-radius: 15px 15px 15px 0;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.3s ease-in;
         }
         
         .typing-indicator span {
@@ -365,6 +393,25 @@
             0% { transform: scale(1); }
             50% { transform: scale(1.5); }
             100% { transform: scale(1); }
+        }
+
+        /* Custom scrollbar for chat */
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
         }
     </style>
 </head>
@@ -416,14 +463,15 @@
                 <div class="title">แชทสอบถามข้อมูล HR</div>
             </div>
             
-            <div class="chat-container">
-                <div class="messages-container" id="messagesContainer">
+            <div class="chat-container" id="messageContainer">
+                <div class="messages-wrapper" id="messagesWrapper">
                     <!-- Messages will be added here -->
                 </div>
-                <div class="input-area">
-                    <input type="text" id="messageInput" class="message-input" placeholder="พิมพ์ข้อความที่นี่...">
-                    <button id="sendButton" class="send-button">ส่ง</button>
-                </div>
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="messageInput" class="message-input" placeholder="พิมพ์ข้อความ...">
+                <button id="sendButton" class="send-button">ส่ง</button>
             </div>
         </div>
     </div>
@@ -436,7 +484,8 @@
         // DOM Elements
         const loginContainer = document.getElementById('loginContainer');
         const chatContainer = document.getElementById('chatContainer');
-        const messagesContainer = document.getElementById('messagesContainer');
+        const messageContainer = document.getElementById('messageContainer');
+        const messagesWrapper = document.getElementById('messagesWrapper');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
         const loginButton = document.getElementById('loginButton');
@@ -456,7 +505,7 @@
             const welcomeMessage = document.createElement('div');
             welcomeMessage.className = 'message message-bot';
             welcomeMessage.textContent = `สวัสดีคุณ${currentEmployee.name} ฉันคือระบบแชทบอทของ HR ยินดีให้บริการค่ะ\n\nคุณสามารถสอบถามข้อมูลเกี่ยวกับการทำงาน การลา หรือเงินเดือนของคุณได้ค่ะ`;
-            messagesContainer.appendChild(welcomeMessage);
+            messagesWrapper.appendChild(welcomeMessage);
             scrollToBottom();
         }
         
@@ -471,6 +520,13 @@
             
             // Try to login
             socket.emit('login', empId);
+        });
+        
+        // Handle login on Enter key
+        employeeIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loginButton.click();
+            }
         });
         
         // Handle login response
@@ -508,6 +564,9 @@
             
             if (!message) return;
             
+            // Disable send button temporarily
+            sendButton.disabled = true;
+            
             // Add message to chat
             addUserMessage(message);
             
@@ -526,7 +585,8 @@
         
         // Enter key press
         messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
                 sendMessage();
             }
         });
@@ -535,6 +595,9 @@
         socket.on('chat_response', (response) => {
             // Hide typing indicator
             hideTypingIndicator();
+            
+            // Re-enable send button
+            sendButton.disabled = false;
             
             if (response.success) {
                 // Add bot response to chat
@@ -557,29 +620,34 @@
         
         // Add user message to chat
         function addUserMessage(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message message-user';
-            messageDiv.textContent = message;
-            messagesContainer.appendChild(messageDiv);
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message message-user';
+            messageElement.textContent = message;
+            messagesWrapper.appendChild(messageElement);
             scrollToBottom();
         }
         
         // Add bot message to chat
         function addBotMessage(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message message-bot';
-            messageDiv.textContent = message;
-            messagesContainer.appendChild(messageDiv);
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message message-bot';
+            messageElement.textContent = message;
+            messagesWrapper.appendChild(messageElement);
             scrollToBottom();
         }
         
         // Show typing indicator
         function showTypingIndicator() {
-            const typingDiv = document.createElement('div');
-            typingDiv.id = 'typingIndicator';
-            typingDiv.className = 'message message-bot';
-            typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-            messagesContainer.appendChild(typingDiv);
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.id = 'typingIndicator';
+            
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('span');
+                indicator.appendChild(dot);
+            }
+            
+            messagesWrapper.appendChild(indicator);
             scrollToBottom();
         }
         
@@ -593,7 +661,9 @@
         
         // Scroll to bottom of chat
         function scrollToBottom() {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            requestAnimationFrame(() => {
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            });
         }
         
         // Show login error
@@ -612,7 +682,7 @@
         logoutButton.addEventListener('click', () => {
             // Reset state
             currentEmployee = null;
-            messageContainer.innerHTML = '';
+            messagesWrapper.innerHTML = '';
             
             // Show login, hide chat
             loginContainer.classList.remove('hidden');
@@ -624,6 +694,12 @@
             
             // Focus on employee ID input
             employeeIdInput.focus();
+        });
+        
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
         });
     </script>
 </body>
