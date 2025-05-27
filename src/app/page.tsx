@@ -49,7 +49,6 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ message: input }),
       })
-
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || `API request failed`)
@@ -67,16 +66,17 @@ export default function ChatPage() {
         setMessages((prevMessages) => [...prevMessages, aiMessage])
       }
     } catch (err: any) {
-      console.error("Chat error:", err)
-      setError(err.message || "เกิดข้อผิดพลาดในการประมวลผล")
+      console.error("Error in handleSubmit:", err)
+      const errorMessage = err.message || "เกิดข้อผิดพลาดในการประมวลผล"
+      setError(errorMessage)
       
-      const errorMessage: Message = {
+      const errorMessageObj: Message = {
         id: Date.now().toString() + "error",
-        text: `ข้อผิดพลาด: ${err.message || "ไม่สามารถเชื่อมต่อได้"}`,
+        text: `ข้อผิดพลาด: ${errorMessage}`,
         sender: "ai",
         type: chatMode
       }
-      setMessages((prevMessages) => [...prevMessages, errorMessage])
+      setMessages((prevMessages) => [...prevMessages, errorMessageObj])
     } finally {
       setIsLoading(false)
     }

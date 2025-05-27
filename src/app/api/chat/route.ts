@@ -5,7 +5,7 @@ import {
   HarmBlockThreshold,
 } from "@google/generative-ai";
 
-const MODEL_NAME = "gemini-1.5-flash"; // Or "gemini-1.0-pro", "gemini-1.5-flash", "gemini-1.5-pro" etc.
+const MODEL_NAME = process.env.MODEL_NAME || "gemini-1.5-flash"; // Or "gemini-1.0-pro", "gemini-1.5-flash", "gemini-1.5-pro" etc.
 const API_KEY = process.env.GOOGLE_API_KEY || "";
 
 export async function POST(req: NextRequest) {
@@ -67,13 +67,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reply: text });
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    const errorInfo = new Error()
+    const stackLine = errorInfo.stack?.split('\n')[1]?.trim()
+    
+    console.error(`[${new Date().toISOString()}] [ERROR] [${__filename}] [${stackLine || 'unknown:0:0'}] Error calling Gemini API:`, error);
+    
     let errorMessage = "Failed to get response from AI";
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    // Check for specific Gemini API errors if needed
-    // e.g., if (error.message.includes("SAFETY")) { ... }
+    
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
