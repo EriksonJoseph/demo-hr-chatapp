@@ -2,10 +2,27 @@ import { NextRequest, NextResponse } from "next/server"
 import { parseNaturalLanguageQuery, formatResultsAsNaturalLanguage } from "@/nl-processor"
 import { executeQuery, DatabaseQuery } from "@/database-helper"
 
+// Regular expressions to identify personal questions
+const PERSONAL_QUESTION_PATTERNS = [
+  /\bฉัน\b|\bของฉัน\b|\bผม\b|\bดิฉัน\b|\bตัวเอง\b/i,  // 'I', 'my', 'myself' in Thai
+  /\bเรา\b|\bพวกเรา\b|\bของเรา\b/i,  // 'we', 'our', 'ourselves' in Thai
+  /\bการเข้างานของฉัน\b|\bวันลาของฉัน\b|\bเงินเดือนของฉัน\b/i,  // 'my attendance', 'my leave', 'my salary' in Thai
+  /\bมาทำงาน\b|\bขาดงาน\b|\bลางาน\b/i  // 'come to work', 'absent', 'take leave' in Thai
+]
+
+// Patterns to detect when a user is trying to access other people's data
+const OTHER_EMPLOYEE_PATTERNS = [
+  /\bเงินเดือน\b.*?\b(\d+|\bของ.*?)\b/i,  // salary of someone/ID
+  /\bพนักงาน\b.*?\b\d+\b/i,  // employee with ID
+  /\bข้อมูล\b.*?(\bของ\b|\bสมชาย\b|\bสมหญิง\b|\bนาย\b|\bนาง\b|\bนางสาว\b)/i,  // data of someone
+  /\bของเพื่อน\b/i,  // colleague's data
+  /\bของแผนก\b/i  // department's data
+]
+
 
 export async function POST(req: NextRequest) {
   try {
-    const { message } = await req.json()
+    const { message, employeeId } = await req.json()
 
     if (!message) {
       return NextResponse.json(
@@ -13,9 +30,39 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+    // Check if an employee is selected and if they're trying to access another employee's data
+    const isAccessingOtherEmployeeData = employeeId && OTHER_EMPLOYEE_PATTERNS.some(pattern => pattern.test(message))
+    
+    // If a specific employee is selected and they're trying to access other employees' data,
+    // restrict access with a security message
+    if (isAccessingOtherEmployeeData) {
+      return NextResponse.json({ 
+        reply: "ฉันไม่สามารถเข้าถึงข้อมูลของพนักงานคนอื่นได้ ขออภัยในความไม่สะดวกนี้",
+        restricted: true
+      })
+    }
+    
+    // Check if the question is personal and requires employee context
+    const isPersonalQuestion = PERSONAL_QUESTION_PATTERNS.some(pattern => pattern.test(message))
+    
     // Parse natural language query into database query
-    const queryStructure = await parseNaturalLanguageQuery(message)
-
+    let queryStructure = await parseNaturalLanguageQuery(message)
+    
+    // Add employee filter if it's a personal question and employeeId is provided
+    if (isPersonalQuestion && employeeId) {
+      // Add employee filter to conditions
+      if (!queryStructure.conditions) {
+        queryStructure.conditions = {}
+      }
+      
+      // Only add this condition if the query is on a table that has emp_id
+      if (['employees', 'attendance', 'leave_requests', 'payroll', 'benefits'].includes(queryStructure.table)) {
+        queryStructure.conditions.emp_id = { operator: '=', value: Number(employeeId) }
+      }
+    }
+    
+    // If no employeeId is provided, we're in admin mode - no restrictions
+    // The query will execute as normal without any employee_id filtering (unless specifically requested)
     
     // Execute the database query
     let results = await executeQuery(queryStructure)
@@ -57,13 +104,15 @@ export async function POST(req: NextRequest) {
     const naturalLanguageResponse = await formatResultsAsNaturalLanguage(
       message, 
       results, 
-      queryStructure
+      queryStructure,
+      employeeId ? true : false // Indicate if the query was personalized
     )
 
     return NextResponse.json({ 
       reply: naturalLanguageResponse,
       queryStructure,
-      resultsCount: results.length
+      resultsCount: results.length,
+      personalized: isPersonalQuestion && employeeId ? true : false
     })
 
   } catch (error) {

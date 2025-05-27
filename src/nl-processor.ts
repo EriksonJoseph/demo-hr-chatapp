@@ -105,7 +105,8 @@ Respond only with the JSON object, no other text.
 export async function formatResultsAsNaturalLanguage(
   query: string, 
   results: any[], 
-  queryStructure: DatabaseQuery
+  queryStructure: DatabaseQuery,
+  personalized: boolean = false
 ): Promise<string> {
   const model = genAI.getGenerativeModel({ model: process.env.MODEL_NAME || "gemini-1.5-flash" })
 
@@ -115,6 +116,7 @@ Convert the following database query results into a natural, conversational resp
 Original user question: "${query}"
 Database results: ${JSON.stringify(results, null, 2)} // These results might include an 'employee_full_name' field.
 Query structure: ${JSON.stringify(queryStructure, null, 2)}
+Personalized: ${personalized} // Indicates if this is a personalized query for the current user
 
 Guidelines:
 - Respond in Thai language.
