@@ -96,15 +96,15 @@ Respond only with the JSON object, no other text.
   
   try {
     return JSON.parse(response?.replace('```json', '').replace('```', '').trim())
-  } catch (error) {
-    console.error('Failed to parse AI response:', response)
+  } catch (parseError) {
+    console.error('Failed to parse AI response:', response, 'Error details:', parseError)
     throw new Error('Could not understand the query')
   }
 }
 
 export async function formatResultsAsNaturalLanguage(
   query: string, 
-  results: any[], 
+  results: Record<string, unknown>[], 
   queryStructure: DatabaseQuery,
   personalized: boolean = false
 ): Promise<string> {

@@ -98,9 +98,9 @@ export default function ChatPage() {
         }
         setMessages((prevMessages) => [...prevMessages, aiMessage])
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error in handleSubmit:", err)
-      const errorMessage = err.message || "เกิดข้อผิดพลาดในการประมวลผล"
+      const errorMessage = err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการประมวลผล"
       setError(errorMessage)
       
       const errorMessageObj: Message = {
@@ -164,9 +164,9 @@ export default function ChatPage() {
           setMessages((prevMessages) => [...prevMessages, aiMessage])
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Error in handleQuestionClick:", err)
-        const errorMessage = err.message || "เกิดข้อผิดพลาดในการประมวลผล"
+        const errorMessage = err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการประมวลผล"
         setError(errorMessage)
         
         const errorMessageObj: Message = {
@@ -222,7 +222,7 @@ export default function ChatPage() {
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกตัวตน</label>
           <select 
-            className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#06C755] focus:border-[#06C755]"
+            className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#06C755] focus:border-[#06C755] focus:outline-none shadow-sm"
             value={selectedEmployee?.emp_id || ''}
             onChange={(e) => {
               const empId = parseInt(e.target.value)
@@ -306,14 +306,13 @@ export default function ChatPage() {
             {chatMode === "database" ? (
               <div>
                 <p className="mb-2">ถามข้อมูลพนักงาน การเข้างาน เงินเดือน และอื่นๆ</p>
-                <p className="text-sm">ตอบอย่าง: "แสดงพนักงานทั้งหมด", "นับพนักงานแผนก IT", "ข้อมูลการเข้างานของพนักงาน ID 1"</p>
+                <p>ถามคำถามเกี่ยวกับข้อมูล HR ได้เลย เช่น &quot;แสดงพนักงานทั้งหมด&quot; หรือ &quot;ใครเข้างานสายบ้างวันนี้&quot;</p>
               </div>
             ) : (
               <p>เริ่มต้นการสนทนาด้วย AI Assistant</p>
             )}
           </div>
         )}
-        
         {messages.map((msg) => (
           <div
             key={msg.id}

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     const isPersonalQuestion = PERSONAL_QUESTION_PATTERNS.some(pattern => pattern.test(message))
     
     // Parse natural language query into database query
-    let queryStructure = await parseNaturalLanguageQuery(message)
+    const queryStructure = await parseNaturalLanguageQuery(message)
     
     // Add employee filter if it's a personal question and employeeId is provided
     if (isPersonalQuestion && employeeId) {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       const empIds = [...new Set(results.map(r => r.emp_id).filter(id => id != null))];
       if (empIds.length > 0) {
         const employeeNameQuery: DatabaseQuery = {
-          type: 'SELECT' as 'SELECT', // Cast to literal type
+          type: 'SELECT',
           table: 'employees',
           columns: ['emp_id', 'first_name', 'last_name'],
           conditions: {
@@ -100,20 +100,24 @@ export async function POST(req: NextRequest) {
       }
     }
     
+    // Handle potentially null results from executeQuery
+    const safeResults = results === null ? [] : results;
+    const resultsCount = results === null ? 0 : results.length;
+
     // Format results as natural language
     const naturalLanguageResponse = await formatResultsAsNaturalLanguage(
       message, 
-      results, 
+      safeResults, // Use the null-checked results
       queryStructure,
       employeeId ? true : false // Indicate if the query was personalized
-    )
+    );
 
     return NextResponse.json({ 
       reply: naturalLanguageResponse,
       queryStructure,
-      resultsCount: results.length,
+      resultsCount: resultsCount, // Use the null-checked count
       personalized: isPersonalQuestion && employeeId ? true : false
-    })
+    });
 
   } catch (error) {
     console.error("Database chat error:", error)

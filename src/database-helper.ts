@@ -5,7 +5,7 @@ export interface DatabaseQuery {
   type: 'SELECT' | 'COUNT' | 'AGGREGATE'
   table: string
   columns?: string[]
-  conditions?: Record<string, any>
+  conditions?: Record<string, unknown>
   joins?: string[]
   groupBy?: string[]
   orderBy?: { column: string; direction: 'asc' | 'desc' }[]
@@ -27,7 +27,7 @@ function parseSQLiteDate(dateInputStr: string): string {
   }
 
   const now = new Date(); // Base for 'now' calculations
-  let targetDate = new Date(now); // Work with a copy
+  const targetDate = new Date(now); // Work with a copy
 
   // Normalize to lowercase for easier matching
   const lowerDateStr = dateInputStr.toLowerCase();
@@ -118,11 +118,17 @@ export async function executeQuery(query: DatabaseQuery) {
     // Handle subqueries first
     const conditions = { ...query.conditions }
     for (const [key, condition] of Object.entries(conditions)) {
-      if (condition?.operator === '=' && 
-          typeof condition.value === 'string' && 
-          condition.value.startsWith('(SELECT') && 
-          condition.value.endsWith(')')) {
-        const subquery = condition.value.slice(1, -1) // Remove parentheses
+      if (
+        condition &&
+        typeof condition === 'object' &&
+        'operator' in condition &&
+        'value' in condition &&
+        (condition as { operator: string; value: unknown }).operator === '=' &&
+        typeof (condition as { operator: string; value: unknown }).value === 'string' &&
+        ((condition as { value: string }).value.startsWith('(SELECT') &&
+        (condition as { value: string }).value.endsWith(')'))
+      ) {
+        const subquery = (condition.value as string).slice(1, -1) // Remove parentheses
         conditions[key] = {
           operator: 'in',
           value: await executeSubquery(subquery)
@@ -131,6 +137,7 @@ export async function executeQuery(query: DatabaseQuery) {
     }
     
     const initialBuilder = supabase.from(query.table);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let finalQuery: PostgrestFilterBuilder<any, any, any>;
 
     // Apply select columns
@@ -144,13 +151,13 @@ export async function executeQuery(query: DatabaseQuery) {
     if (conditions) {
       for (const [key, condition] of Object.entries(conditions)) {
         if (condition && typeof condition === 'object' && 'operator' in condition && 'value' in condition) {
-          const { operator, value } = condition as { operator: string; value: any };
+          const { operator, value } = condition as { operator: string; value: unknown };
           
           switch (operator.toUpperCase()) {
             case '=':
               if (value === null) {
                 finalQuery = finalQuery.is(key, null);
-              } else {
+              } else if (value !== undefined) {
                 finalQuery = finalQuery.eq(key, value);
               }
               break;
@@ -162,10 +169,15 @@ export async function executeQuery(query: DatabaseQuery) {
               break;
             case 'BETWEEN':
               // For BETWEEN, value should be a string with AND separated values
-              const [startStr, endStr] = value.split(' AND ').map((v: string) => v.trim());
+              if (typeof value === 'string') {
+                const [startStr, endStr] = value.split(' AND ').map((v: string) => v.trim());
               const startDate = parseSQLiteDate(startStr);
               const endDate = parseSQLiteDate(endStr);
-              finalQuery = finalQuery.gte(key, startDate).lte(key, endDate);
+                finalQuery = finalQuery.gte(key, startDate).lte(key, endDate);
+              } else {
+                console.warn(`Unsupported value type for BETWEEN operator: ${typeof value} for key ${key}`);
+                // Optionally, throw an error or handle as a non-match
+              }
               break;
             case '>':
               finalQuery = finalQuery.gt(key, value);
@@ -189,11 +201,15 @@ export async function executeQuery(query: DatabaseQuery) {
               break;
             default:
               console.warn(`Unsupported operator: ${operator}`);
-              finalQuery = finalQuery.eq(key, value);
+              if (value !== undefined) {
+                finalQuery = finalQuery.eq(key, value);
+              }
           }
         } else {
           // Fallback to simple equality check for non-object conditions
-          finalQuery = finalQuery.eq(key, condition);
+          if (condition !== undefined) {
+            finalQuery = finalQuery.eq(key, condition);
+          }
         }
       }
     }
@@ -265,7 +281,7 @@ export async function getDepartmentStats() {
 
   if (error) throw error
   
-  const stats = data.reduce((acc: Record<string, number>, emp) => {
+  const stats = data.reduce((acc: Record<string, number>, emp: { department: string }) => {
     acc[emp.department] = (acc[emp.department] || 0) + 1
     return acc
   }, {})
