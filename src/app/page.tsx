@@ -1,111 +1,136 @@
-// src/app/page.tsx
-"use client"; // This marks the component as a Client Component
+"use client"
 
-import { useState, FormEvent, useRef, useEffect } from "react";
+import { useState, FormEvent, useRef, useEffect } from "react"
 
 interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "gemini";
-}
-
-// Gemini expects history in a specific format
-interface GeminiHistoryPart {
-  role: "user" | "model";
-  parts: { text: string }[];
+  id: string
+  text: string
+  sender: "user" | "ai"
+  type?: "database" | "general"
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [chatMode, setChatMode] = useState<"general" | "database">("general")
+  const [error, setError] = useState<string | null>(null)
 
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const messagesEndRef = useRef<null | HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
-  useEffect(scrollToBottom, [messages]);
+  useEffect(scrollToBottom, [messages])
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+    e.preventDefault()
+    if (!input.trim()) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
       text: input,
       sender: "user",
-    };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setInput("");
-    setIsLoading(true);
-    setError(null);
-
-    // Prepare history for Gemini API
-    const geminiHistory: GeminiHistoryPart[] = messages.map((msg) => ({
-      role: msg.sender === "user" ? "user" : "model",
-      parts: [{ text: msg.text }],
-    }));
+      type: chatMode
+    }
+    
+    setMessages((prevMessages) => [...prevMessages, userMessage])
+    setInput("")
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const response = await fetch("/api/chat", {
+      const endpoint = chatMode === "database" ? "/api/database-chat" : "/api/chat"
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: input, history: geminiHistory }), // Send current message and history
-      });
+        body: JSON.stringify({ message: input }),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || `API request failed with status ${response.status}`
-        );
+        const errorData = await response.json()
+        throw new Error(errorData.error || `API request failed`)
       }
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (data.reply) {
-        const geminiMessage: Message = {
-          id: Date.now().toString() + "g",
+        const aiMessage: Message = {
+          id: Date.now().toString() + "ai",
           text: data.reply,
-          sender: "gemini",
-        };
-        setMessages((prevMessages) => [...prevMessages, geminiMessage]);
-      } else if (data.error) {
-        // Handle cases where Gemini might block due to safety or other reasons
-        setError(`Gemini: ${data.error}`);
-        const geminiErrorMessage: Message = {
-          id: Date.now().toString() + "g_err",
-          text: `Error: ${data.error}`,
-          sender: "gemini",
-        };
-        setMessages((prevMessages) => [...prevMessages, geminiErrorMessage]);
+          sender: "ai",
+          type: chatMode
+        }
+        setMessages((prevMessages) => [...prevMessages, aiMessage])
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error("Fetch error:", err);
-      setError(err.message || "An unexpected error occurred.");
-      const systemErrorMessage: Message = {
-        id: Date.now().toString() + "s_err",
-        text: `Error: ${err.message || "Failed to connect"}`,
-        sender: "gemini",
-      };
-      setMessages((prevMessages) => [...prevMessages, systemErrorMessage]);
+      console.error("Chat error:", err)
+      setError(err.message || "เกิดข้อผิดพลาดในการประมวลผล")
+      
+      const errorMessage: Message = {
+        id: Date.now().toString() + "error",
+        text: `ข้อผิดพลาด: ${err.message || "ไม่สามารถเชื่อมต่อได้"}`,
+        sender: "ai",
+        type: chatMode
+      }
+      setMessages((prevMessages) => [...prevMessages, errorMessage])
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="flex flex-col h-screen max-w-2xl mx-auto p-4 bg-gray-900 text-white">
-      <h1 className="text-3xl font-bold text-center mb-6 text-purple-400">
-        Gemini Chat
+    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4 bg-gray-900 text-white">
+      <div className="mb-4 flex justify-center">
+        <div className="bg-gray-800 rounded-lg p-1 flex">
+          <button
+            onClick={() => setChatMode("general")}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              chatMode === "general"
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            💬 แชททั่วไป
+          </button>
+          <button
+            onClick={() => setChatMode("database")}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              chatMode === "database"
+                ? "bg-green-600 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            📊 ถาม Database
+          </button>
+        </div>
+      </div>
+
+      <h1 className="text-3xl font-bold text-center mb-6">
+        {chatMode === "database" ? (
+          <span className="text-green-400">🗄️ HR Database Assistant</span>
+        ) : (
+          <span className="text-blue-400">🤖 AI Chat Assistant</span>
+        )}
       </h1>
 
       <div className="flex-grow overflow-y-auto mb-4 p-4 bg-gray-800 rounded-lg space-y-4">
+        {messages.length === 0 && (
+          <div className="text-center text-gray-400 py-8">
+            {chatMode === "database" ? (
+              <div>
+                <p className="mb-2">ถามข้อมูลพนักงาน การเข้างาน เงินเดือน และอื่นๆ</p>
+                <p className="text-sm">ตอบอย่าง: "แสดงพนักงานทั้งหมด", "นับพนักงานแผนก IT", "ข้อมูลการเข้างานของพนักงาน ID 1"</p>
+              </div>
+            ) : (
+              <p>เริ่มต้นการสนทนาด้วย AI Assistant</p>
+            )}
+          </div>
+        )}
+        
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -116,15 +141,22 @@ export default function ChatPage() {
             <div
               className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
                 msg.sender === "user"
-                  ? "bg-purple-600 text-white"
+                  ? chatMode === "database"
+                    ? "bg-green-600 text-white"
+                    : "bg-blue-600 text-white"
                   : "bg-gray-700 text-gray-200"
               }`}
             >
               <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+              {msg.type && (
+                <span className="text-xs opacity-75 block mt-1">
+                  {msg.type === "database" ? "📊" : "💬"}
+                </span>
+              )}
             </div>
           </div>
         ))}
-        <div ref={messagesEndRef} /> {/* For auto-scrolling */}
+        <div ref={messagesEndRef} />
       </div>
 
       {error && (
@@ -136,44 +168,30 @@ export default function ChatPage() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Gemini anything..."
-          className="flex-grow p-3 rounded-lg bg-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          placeholder={
+            chatMode === "database"
+              ? "ถามข้อมูลจาก database..."
+              : "ถาม AI อะไรก็ได้..."
+          }
+          className="flex-grow p-3 rounded-lg bg-gray-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           disabled={isLoading}
         />
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
+          className={`font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ${
+            chatMode === "database"
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-blue-600 hover:bg-blue-700"
+          } text-white`}
         >
-          {isLoading ? (
-            <svg
-              className="animate-spin h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-          ) : (
-            "Send"
-          )}
+          {isLoading ? "..." : "ส่ง"}
         </button>
       </form>
+      
       <p className="text-xs text-gray-500 mt-2 text-center">
-        Powered by Google Gemini
+        {chatMode === "database" ? "📊 HR Database Assistant" : "🤖 Powered by Google Gemini"}
       </p>
     </div>
-  );
+  )
 }
