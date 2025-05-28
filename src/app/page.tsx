@@ -31,6 +31,8 @@ export default function ChatPage() {
   
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  console.log("setChatMode: ", setChatMode)
+  console.log("messagesContainerRef: ", messagesContainerRef)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -321,7 +323,7 @@ export default function ChatPage() {
 
         <h1 className="text-2xl font-bold text-center mb-6">
           {chatMode === "database" ? (
-            <span className="text-[#06C755] dark:text-[#06C755]">Chat messages</span>
+            <span className="text-[#06C755] dark:text-[#06C755]">Questions</span>
           ) : (
             <span className="text-blue-500 dark:text-blue-400">🤖 AI Chat Assistant</span>
           )}

@@ -2,10 +2,17 @@
 
 import { useEffect, useState } from 'react';
 
-type PackageJson = {
+// Define the exact shape of package.json we're using
+interface PackageJson {
+  name: string;
   version: string;
-  [key: string]: any;
-};
+  description?: string;
+  main?: string;
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  // Add other fields as needed
+}
 
 export default function Footer() {
   const [version, setVersion] = useState('');
@@ -13,8 +20,8 @@ export default function Footer() {
   useEffect(() => {
     // Dynamically import package.json to get the version
     import('../../package.json')
-      .then((pkg: PackageJson) => {
-        setVersion(pkg.version);
+      .then((pkg: { default: PackageJson }) => {
+        setVersion(pkg.default.version);
       })
       .catch(() => {
         console.warn('Failed to load package.json');

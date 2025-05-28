@@ -59,7 +59,7 @@ function parseSQLiteDate(dateInputStr: string): string {
     }
   }
 
-  let targetDate = new Date(); // Use current date as base
+  const targetDate = new Date(); // Use current date as base
 
   // Handle CURRENT_DATE and CURRENT_DATE with interval
   const intervalMatch = normalizedInput.match(/^CURRENT_DATE\s*([+-])\s*INTERVAL\s*'(\d+)\s+(DAY|DAYS)'$/);
