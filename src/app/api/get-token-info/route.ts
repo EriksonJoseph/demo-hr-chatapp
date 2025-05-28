@@ -35,8 +35,12 @@ export async function GET(request: NextRequest) {
       questions: data.questions
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
+    let errorMessage = 'Unknown error';
+    if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message?: string }).message || errorMessage;
+    }
     console.error('API error fetching token info:', err);
-    return NextResponse.json({ error: 'Internal server error', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 });
   }
 }

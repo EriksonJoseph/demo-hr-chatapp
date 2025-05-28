@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 type PackageJson = {
   version: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 export default function Footer() {

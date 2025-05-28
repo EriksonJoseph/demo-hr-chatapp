@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/supabase'
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/supabase';
 
 interface TokenVerificationProps {
-  isVerified: boolean
-  setIsVerified: (verified: boolean) => void
-  tokenId: string
-  setTokenId: (tokenId: string) => void
-  remainingQuestions: number
-  setRemainingQuestions: (count: number) => void
-  setQuestions: (questions: string) => void
+  isVerified: boolean;
+  setIsVerified: (verified: boolean) => void;
+  tokenId: string;
+  setTokenId: (tokenId: string) => void;
+  remainingQuestions: number;
+  setRemainingQuestions: (count: number) => void;
+  setQuestions: (questions: string) => void;
 }
 
 export default function TokenVerification({
@@ -20,65 +20,58 @@ export default function TokenVerification({
   setTokenId,
   remainingQuestions,
   setRemainingQuestions,
-  setQuestions
+  setQuestions,
 }: TokenVerificationProps) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    // Check if there's a token in localStorage and verify it
-    const storedToken = localStorage.getItem('hrChatToken')
-    if (storedToken) {
-      setTokenId(storedToken)
-      verifyToken(storedToken)
-    }
-  }, [])
-
   // Verify the token with the server to get the latest remaining questions count
-  const verifyToken = async (tokenToVerify = tokenId) => {
+  const verifyToken = useCallback(async (tokenToVerify: string = tokenId) => {
     if (!tokenToVerify.trim()) {
-      setError("กรุณากรอก Token ID")
-      return
+      setError("กรุณากรอก Token ID");
+      return;
     }
-
-    setLoading(true)
-    setError('')
-
+    setLoading(true);
+    setError('');
     try {
-      // Check the token in the database
       const { data, error: queryError } = await supabase
         .from('tokens')
         .select('token_id, total_questions, questions')
         .eq('token_id', tokenToVerify)
-        .single()
-
+        .single();
       if (queryError || !data) {
-        setError("Token ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง")
-        setIsVerified(false)
-        return
+        setError("Token ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง");
+        setIsVerified(false);
+        return;
       }
-
-      // Token is valid
-      setIsVerified(true)
-      setRemainingQuestions(data.total_questions)
-      setQuestions(data.questions || '')
-      localStorage.setItem('hrChatToken', tokenToVerify)
+      setIsVerified(true);
+      setRemainingQuestions(data.total_questions);
+      setQuestions(data.questions || '');
+      localStorage.setItem('hrChatToken', tokenToVerify);
     } catch (err) {
-      console.error("Error verifying token:", err)
-      setError("เกิดข้อผิดพลาดในการตรวจสอบ Token")
-      setIsVerified(false)
+      console.error("Error verifying token:", err);
+      setError("เกิดข้อผิดพลาดในการตรวจสอบ Token");
+      setIsVerified(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, [tokenId, setIsVerified, setRemainingQuestions, setQuestions]);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('hrChatToken');
+    if (storedToken) {
+      setTokenId(storedToken);
+      verifyToken(storedToken);
+    }
+  }, [setTokenId, verifyToken]);
 
   const handleLogout = () => {
-    localStorage.removeItem('hrChatToken')
-    setIsVerified(false)
-    setTokenId('')
-    setRemainingQuestions(0)
-    setQuestions('')
-  }
+    localStorage.removeItem('hrChatToken');
+    setIsVerified(false);
+    setTokenId('');
+    setRemainingQuestions(0);
+    setQuestions('');
+  };
 
   if (isVerified) {
     return (
@@ -94,7 +87,7 @@ export default function TokenVerification({
           ออกจากระบบ
         </button>
       </div>
-    )
+    );
   }
 
   return (
@@ -103,7 +96,6 @@ export default function TokenVerification({
         <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-white">
           กรุณากรอก Token ID
         </h2>
-        
         <div className="space-y-4">
           <div>
             <label htmlFor="token" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -118,11 +110,9 @@ export default function TokenVerification({
               className="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-[#06C755] focus:border-[#06C755] focus:outline-none"
             />
           </div>
-          
           {error && (
             <p className="text-red-500 text-sm">{error}</p>
           )}
-          
           <button
             onClick={() => verifyToken()}
             disabled={loading}
@@ -133,5 +123,5 @@ export default function TokenVerification({
         </div>
       </div>
     </div>
-  )
+  );
 }

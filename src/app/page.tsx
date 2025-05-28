@@ -285,6 +285,11 @@ export default function ChatPage() {
     );
   }
 
+  // to be deleted
+  console.log(setChatMode)
+  console.log(messagesContainerRef)
+  console.log(handleTokenVerified)
+
   return (
     <div className="flex h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white overflow-hidden">
       {/* Mobile menu button */}
