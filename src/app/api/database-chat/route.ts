@@ -26,12 +26,38 @@ export async function POST(req: NextRequest) {
     const { message, employeeId, tokenId } = await req.json() // Added tokenId
     console.log("message: ", message)
     console.log("employeeId: ", employeeId)
+    console.log("tokenId: ", tokenId)
 
     if (!message) {
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
       )
+    }
+
+    // Check if token has remaining questions
+    if (tokenId) {
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('tokens')
+        .select('total_questions')
+        .eq('token_id', tokenId)
+        .single();
+
+      if (tokenError) {
+        console.error('Error fetching token info:', tokenError);
+        return NextResponse.json(
+          { error: "เกิดข้อผิดพลาดในการตรวจสอบโควต้าคำถาม" },
+          { status: 500 }
+        )
+      }
+
+
+      if (!tokenData || tokenData.total_questions <= 0) {
+        return NextResponse.json(
+          { error: `โควต้าของ key ${tokenId} หมดแล้ว กรุณาใช้ key ใหม่` },
+          { status: 402 } // 402 Payment Required
+        )
+      }
     }
     // Check if an employee is selected and if they're trying to access another employee's data
     const isAccessingOtherEmployeeData = employeeId && OTHER_EMPLOYEE_PATTERNS.some(pattern => pattern.test(message))

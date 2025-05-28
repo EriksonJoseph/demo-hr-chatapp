@@ -35,11 +35,54 @@ export default function ChatPage() {
   const [isVerified, setIsVerified] = useState<boolean>(false);
   const [remainingQuestions, setRemainingQuestions] = useState<number>(0);
   const [questionsLog, setQuestionsLog] = useState<string>("");
+  console.log("questionsLog : ", questionsLog)
   
+  const fetchTokenInfo = async (currentTokenId: string) => {
+    if (!currentTokenId) return;
+    try {
+      const response = await fetch(`/api/get-token-info?tokenId=${currentTokenId}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error fetching token info:", errorData.error || "API request failed");
+        // Optionally, set an error state for the user if this fetch fails silently
+        // For now, it updates remainingQuestions to 0 if token is invalid or not found by API
+        setRemainingQuestions(0);
+        setQuestionsLog("");
+        return;
+      }
+      const data = await response.json();
+      if (data.total_questions !== undefined) {
+        setRemainingQuestions(data.total_questions);
+      }
+      if (data.questions !== undefined) {
+        setQuestionsLog(data.questions);
+      }
+    } catch (err) {
+      console.error("Failed to fetch token info:", err);
+      setRemainingQuestions(0); // Reset on error
+      setQuestionsLog("");
+    }
+  };
+
+  const handleTokenVerified = async (verifiedTokenId: string) => {
+    setTokenId(verifiedTokenId);
+    setIsVerified(true);
+    localStorage.setItem('hrChatToken', verifiedTokenId);
+    await fetchTokenInfo(verifiedTokenId); // Fetch info after verification
+  };
+
+  const handleTokenClear = () => {
+    setTokenId("");
+    setIsVerified(false);
+    setRemainingQuestions(0);
+    setQuestionsLog("");
+    localStorage.removeItem('hrChatToken');
+  };
+
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  console.log("setChatMode: ", setChatMode)
-  console.log("messagesContainerRef: ", messagesContainerRef)
+  // console.log("setChatMode: ", setChatMode)
+  // console.log("messagesContainerRef: ", messagesContainerRef)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -118,6 +161,9 @@ export default function ChatPage() {
           type: chatMode
         }
         setMessages((prevMessages) => [...prevMessages, aiMessage])
+      }
+      if (chatMode === "database" && tokenId && response.ok) {
+        await fetchTokenInfo(tokenId);
       }
     } catch (err) {
       console.error("Error in handleSubmit:", err)
@@ -259,12 +305,18 @@ export default function ChatPage() {
 
       {/* Left sidebar with common questions */}
       <div className={`${isMobileMenuOpen ? 'fixed inset-0 z-10 bg-gray-900 bg-opacity-90' : 'hidden'} md:flex md:static md:w-80 flex-shrink-0 bg-gray-100 dark:bg-gray-800 overflow-y-auto flex flex-col p-4 border-r border-gray-200 dark:border-gray-700`}>
-        <div className="mb-6 text-center">
+        <div className="mb-2 text-center">
           <h2 className="text-xl font-bold text-[#06C755] dark:text-[#06C755] mb-2">HR Chatbot</h2>
         </div>
         
         {/* Employee selector dropdown */}
         <div className="mb-6">
+        <button
+          onClick={handleTokenClear}
+          className="w-full text-left p-3 mb-3 bg-white dark:bg-gray-700 hover:bg-[#e6f7ef] dark:hover:bg-[#05a648] rounded-lg shadow-sm transition duration-150 text-sm"
+        >
+         ⏻   Log out
+        </button>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">สมมติตัวตน</label>
           <select 
             className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#06C755] focus:border-[#06C755] focus:outline-none shadow-sm"
@@ -355,7 +407,7 @@ export default function ChatPage() {
 
         <h1 className="text-2xl font-bold text-center mb-6">
           {chatMode === "database" ? (
-            <span className="text-[#06C755] dark:text-[#06C755]">Questions</span>
+            <span className="text-[#06C755] dark:text-[#06C755]">Questions {isVerified ? `(${remainingQuestions} left)` : ''}</span>
           ) : (
             <span className="text-blue-500 dark:text-blue-400">🤖 AI Chat Assistant</span>
           )}
