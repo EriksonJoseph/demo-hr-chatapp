@@ -370,15 +370,15 @@ export default function ChatPage() {
           onClick={() => {
             // Create a link element to trigger the download
             const link = document.createElement('a');
-            link.href = '/mock data.csv';
-            link.download = 'mock_data.csv';
+            link.href = '/mock data.xlsx';
+            link.download = 'mock_data.xlsx';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
           }}
           className="w-full text-left p-3 mt-3 bg-white dark:bg-gray-700 hover:bg-[#e6f7ef] dark:hover:bg-[#05a648] rounded-lg shadow-sm transition duration-150 text-sm"
         >
-         📥 Download mock database as csv file
+         📥 Download mock database as xlsx file
         </button>
       </div>
 
