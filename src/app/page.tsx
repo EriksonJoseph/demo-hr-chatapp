@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { supabase } from "../supabase"
+import TypingAnimation from "@/components/TypingAnimation"
 
 interface Message {
   id: string
@@ -29,6 +30,7 @@ export default function ChatPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -184,17 +186,27 @@ export default function ChatPage() {
   }
   
   // Common questions for HR database chat
+  const commonQuestionsIdentity = [
+    "ฉันมีวันลาพักร้อนคงเหลือหกี่วัน",
+    "ฉันมีวันลาป่วยคงเหลือกี่วัน",
+    "ฉันมีวันลากิจคงเหลือกี่วัน",
+    "เดือนนี้ฉันมาสายกี่ครั้ง",
+    "ฉันได้สิทธิ์ประกันสุขภาพเท่าไหร่",
+    "จำนวนชั่วโมงทำงานของฉันในสัปดาห์นี้"
+  ]
   const commonQuestions = [
     "แสดงพนักงานทั้งหมดในแผนก IT",
+    "ขอ email ประสิทธิ์",
+    "ขอเบอร์โทรศัพท์ ปรีชา",
+    "พนักงานคนไหนลาเยอะสุด",
+    "พนักงานคนไหนขาดงานเยอะสุด",
     "เงินเดือนเฉลี่ยของพนักงานทุกคน",
-    "วันที่เข้างานล่าสุดของฉัน",
-    "ฉันขาดงานกี่ครั้งในเดือนนี้",
-    "แสดงวันลาทั้งหมดของฉัน",
-    "จำนวนชั่วโมงทำงานของฉันในสัปดาห์นี้"
+    "แผนกไหนเงินเดือนเฉลี่ยเยอะสุด",
+    "วันที่ 25 พฤษภาคม สมชายทำงานหรือไม่"
   ]
 
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white overflow-hidden">
+    <div className="flex h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white overflow-hidden">
       {/* Mobile menu button */}
       <button 
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -212,15 +224,14 @@ export default function ChatPage() {
       </button>
 
       {/* Left sidebar with common questions */}
-      <div className={`${isMobileMenuOpen ? 'fixed inset-0 z-10 bg-gray-900 bg-opacity-90' : 'hidden'} md:flex md:static md:w-80 flex-shrink-0 bg-gray-100 dark:bg-gray-800 overflow-y-auto flex-col p-4 border-r border-gray-200 dark:border-gray-700`}>
+      <div className={`${isMobileMenuOpen ? 'fixed inset-0 z-10 bg-gray-900 bg-opacity-90' : 'hidden'} md:flex md:static md:w-80 flex-shrink-0 bg-gray-100 dark:bg-gray-800 overflow-y-auto flex flex-col p-4 border-r border-gray-200 dark:border-gray-700`}>
         <div className="mb-6 text-center">
           <h2 className="text-xl font-bold text-[#06C755] dark:text-[#06C755] mb-2">HR Chatbot</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">คำถามที่ถามบ่อย</p>
         </div>
         
         {/* Employee selector dropdown */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกตัวตน</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">สมมติตัวตน</label>
           <select 
             className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#06C755] focus:border-[#06C755] focus:outline-none shadow-sm"
             value={selectedEmployee?.emp_id || ''}
@@ -247,8 +258,8 @@ export default function ChatPage() {
         </div>
         
         <div className="space-y-2">
-          <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">คำถามแนะนำ</h3>
-          {commonQuestions.map((question, index) => (
+          <h3 className="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">ชุด preset คำถาม</h3>
+          {(selectedEmployee ? commonQuestionsIdentity :commonQuestions).map((question, index) => (
             <button
               key={index}
               onClick={() => handleQuestionClick(question)}
@@ -256,13 +267,34 @@ export default function ChatPage() {
             >
               {question}
             </button>
-          ))}
+          ))
+        }
         </div>
+
+        {/* Spacer to push the download button to the bottom */}
+        <div className="flex-grow mt-4"></div>
+        
+        {/* Download button at the bottom */}
+        <button
+          onClick={() => {
+            // Create a link element to trigger the download
+            const link = document.createElement('a');
+            link.href = '/mock data.csv';
+            link.download = 'mock_data.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }}
+          className="w-full text-left p-3 mt-3 bg-white dark:bg-gray-700 hover:bg-[#e6f7ef] dark:hover:bg-[#05a648] rounded-lg shadow-sm transition duration-150 text-sm"
+        >
+         📥 Download mock database as csv file
+        </button>
       </div>
 
       {/* Main chat area */}
       <div className="flex flex-col flex-1 max-w-4xl mx-auto p-4">
-        <div className="mb-4 flex justify-center">
+        {/* ปิดไปก่อน */}
+        {/* <div className="mb-4 flex justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-1 flex shadow-md">
           <button
               onClick={() => setChatMode("database")}
@@ -285,11 +317,11 @@ export default function ChatPage() {
               💬 แชททั่วไป
             </button>
           </div>
-        </div>
+        </div> */}
 
         <h1 className="text-2xl font-bold text-center mb-6">
           {chatMode === "database" ? (
-            <span className="text-[#06C755] dark:text-[#06C755]">🗄️ HR Database Assistant</span>
+            <span className="text-[#06C755] dark:text-[#06C755]">Chat messages</span>
           ) : (
             <span className="text-blue-500 dark:text-blue-400">🤖 AI Chat Assistant</span>
           )}
@@ -300,46 +332,35 @@ export default function ChatPage() {
           )}
         </h1>
 
-        <div className="flex-grow overflow-y-auto mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-400 py-8">
-            {chatMode === "database" ? (
-              <div>
-                <p className="mb-2">ถามข้อมูลพนักงาน การเข้างาน เงินเดือน และอื่นๆ</p>
-                <p>ถามคำถามเกี่ยวกับข้อมูล HR ได้เลย เช่น &quot;แสดงพนักงานทั้งหมด&quot; หรือ &quot;ใครเข้างานสายบ้างวันนี้&quot;</p>
-              </div>
-            ) : (
-              <p>เริ่มต้นการสนทนาด้วย AI Assistant</p>
-            )}
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${
-              msg.sender === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+        <div className="flex-1 overflow-y-auto space-y-4">
+          {messages.map((msg) => (
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
-                msg.sender === "user"
-                  ? chatMode === "database"
-                    ? "bg-[#06C755] text-white"
-                    : "bg-blue-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+              key={msg.id}
+              className={`flex ${
+                msg.sender === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
-              {msg.type && (
-                <span className="text-xs opacity-75 block mt-1">
-                  {msg.type === "database" ? "📊" : "💬"} {msg.sender === "user" && selectedEmployee ? `(${selectedEmployee.first_name})` : ""}
-                </span>
-              )}
+              <div
+                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-xl ${
+                  msg.sender === "user"
+                    ? chatMode === "database"
+                      ? "bg-[#06C755] text-white"
+                      : "bg-blue-500 text-white"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                }`}
+              >
+                <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+                {/* {msg.type && (
+                  <span className="text-xs opacity-75 block mt-1">
+                    {msg.type === "database" ? "📊" : "💬"} {msg.sender === "user" && selectedEmployee ? `(${selectedEmployee.first_name})` : ""}
+                  </span>
+                )} */}
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+          ))}
+          {isLoading && <TypingAnimation />}
+          <div ref={messagesEndRef} />
+        </div>
 
       {error && (
         <p className="text-red-400 text-sm mb-2 text-center">{error}</p>

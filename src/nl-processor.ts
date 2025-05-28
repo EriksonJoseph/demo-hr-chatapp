@@ -28,15 +28,18 @@ Convert the user query into a JSON object with this structure:
 
 IMPORTANT RULES:
 1. For first_name, last_name, department, and position fields, ALWAYS use LIKE operator with % wildcards for text matching
-2. For other fields, use = operator for exact matches
+2. For other fields, use the equals sign ('=') as the operator for exact matches
 3. If a query requires \`emp_id\` (e.g., for \`attendance\`, \`leave_requests\`, \`payroll\`, \`benefits\` tables) and an employee's name (first_name, last_name) is provided, construct a subquery to find the \`emp_id\` from the \`employees\` table. Use \`LIKE\` for name matching in the subquery.
 4. For date fields:
-    a. If a partial date like 'YYYY-MM' is provided (e.g., 'เดือน 1 ปี 2024' which implies '2024-01'), convert this into a date range condition using the \`BETWEEN\` operator. The value should be a string \`'YYYY-MM-01' AND 'YYYY-MM-LL'\`, where \`LL\` is the last day of that month.
-    b. For full dates 'YYYY-MM-DD', use the \`=\` operator.
+    a. If a full date 'YYYY-MM-DD' is provided (e.g., '8 พฤษภาคม 2024'), use the equals sign ('=') as the operator with the value in 'YYYY-MM-DD' format (e.g., '2024-05-08').
+    b. If only a day and month are provided (e.g., 'วันที่ 8 พฤษภาคม'), assume the current year. Form a full date 'YYYY-MM-DD' and use the equals sign ('=') as the operator. (Example: If the current year is 2025, 'วันที่ 8 พฤษภาคม' becomes '2025-05-08').
+    c. If only a day is provided (e.g., 'วันที่ 8'), assume the current month and current year. Form a full date 'YYYY-MM-DD' and use the equals sign ('=') as the operator. (Example: If the current date is 2025-05-29, 'วันที่ 8' becomes '2025-05-08'; if the query was 'วันที่ 30', it would become '2025-05-30').
+    d. If a partial date like 'YYYY-MM' is provided (e.g., 'เดือน 1 ปี 2024' which implies '2024-01', or 'มกราคม 2024'), convert this into a date range condition using the 'BETWEEN' operator. The value should be a string similar to '\'YYYY-MM-01\' AND \'YYYY-MM-LL\'', where 'LL' is the last day of that month.
+    e. When forming dates from partial inputs (like day-only or day-month), ensure month and day components are zero-padded (e.g., use '05' for May, '08' for the 8th day).
 5. For the \`status\` column in the \`attendance\` table:
-    a. If the user mentions 'สาย' (late), use operator \`=\` with value \`'late'\`.
-    b. If the user mentions 'ขาด' or 'ขาดงาน' (absent), use operator \`=\` with value \`'absent'\`.
-    c. If the user mentions 'มา' or 'มาทำงาน' (present), use operator \`=\` with value \`'present'\`.
+    a. If the user mentions 'สาย' (late), use the equals sign ('=') as the operator with value 'late'.
+    b. If the user mentions 'ขาด' or 'ขาดงาน' (absent), use the equals sign ('=') as the operator with value 'absent'.
+    c. If the user mentions 'มา' or 'มาทำงาน' (present), use the equals sign ('=') as the operator with value 'present'.
     d. Do NOT use \`LIKE\` for this column.
 
 Examples:

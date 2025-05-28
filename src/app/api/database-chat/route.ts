@@ -4,7 +4,7 @@ import { executeQuery, DatabaseQuery } from "@/database-helper"
 
 // Regular expressions to identify personal questions
 const PERSONAL_QUESTION_PATTERNS = [
-  /\bฉัน\b|\bของฉัน\b|\bผม\b|\bดิฉัน\b|\bตัวเอง\b/i,  // 'I', 'my', 'myself' in Thai
+  /ฉัน|\bของฉัน\b|\bผม\b|\bดิฉัน\b|\bตัวเอง\b/i,  // 'I', 'my', 'myself' in Thai
   /\bเรา\b|\bพวกเรา\b|\bของเรา\b/i,  // 'we', 'our', 'ourselves' in Thai
   /\bการเข้างานของฉัน\b|\bวันลาของฉัน\b|\bเงินเดือนของฉัน\b/i,  // 'my attendance', 'my leave', 'my salary' in Thai
   /\bมาทำงาน\b|\bขาดงาน\b|\bลางาน\b/i  // 'come to work', 'absent', 'take leave' in Thai
@@ -23,6 +23,8 @@ const OTHER_EMPLOYEE_PATTERNS = [
 export async function POST(req: NextRequest) {
   try {
     const { message, employeeId } = await req.json()
+    console.log("message: ", message)
+    console.log("employeeId: ", employeeId)
 
     if (!message) {
       return NextResponse.json(
@@ -44,10 +46,23 @@ export async function POST(req: NextRequest) {
     
     // Check if the question is personal and requires employee context
     const isPersonalQuestion = PERSONAL_QUESTION_PATTERNS.some(pattern => pattern.test(message))
+    console.log("isPersonalQuestion : ", isPersonalQuestion)
     
     // Parse natural language query into database query
     const queryStructure = await parseNaturalLanguageQuery(message)
     
+    // Handle personal questions asked when employeeId is null (e.g., admin context)
+    if (isPersonalQuestion && !employeeId) {
+      // The user's message implies a query about "themselves" (e.g., "my leave"),
+      // but there's no current employee context.
+      // Return an informative message instead of executing an ambiguous query.
+      return NextResponse.json({
+        // Assuming your client expects an 'answer' field for direct bot messages.
+        // Adjust if your client expects a different structure (e.g., 'message' or 'data').
+        answer: "It appears you're asking about personal information (e.g., using 'I' or 'my'). However, I don't have a specific employee context right now. If you're asking about a particular employee, please include their name or ID. Otherwise, you can ask a general HR question."
+      }, { status: 200 }); // 200 OK as it's a valid bot response.
+    }
+
     // Add employee filter if it's a personal question and employeeId is provided
     if (isPersonalQuestion && employeeId) {
       // Add employee filter to conditions
@@ -63,9 +78,11 @@ export async function POST(req: NextRequest) {
     
     // If no employeeId is provided, we're in admin mode - no restrictions
     // The query will execute as normal without any employee_id filtering (unless specifically requested)
+    console.log("queryStructure : ", queryStructure)
     
     // Execute the database query
     let results = await executeQuery(queryStructure)
+    console.log("results : ", results)
 
     // If results contain emp_id, fetch employee names and add them
     if (Array.isArray(results) && results.length > 0 && results[0].hasOwnProperty('emp_id')) {
