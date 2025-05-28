@@ -6,6 +6,7 @@ export interface DatabaseQuery {
   table: string
   columns?: string[]
   conditions?: Record<string, unknown>
+  conditionLogic?: 'AND' | 'OR'  // Default is 'AND' if not specified
   joins?: string[]
   groupBy?: string[]
   orderBy?: { column: string; direction: 'asc' | 'desc' }[]
@@ -59,7 +60,7 @@ function parseSQLiteDate(dateInputStr: string): string {
     }
   }
 
-  const targetDate = new Date(); // Use current date as base
+  let targetDate = new Date(); // Use current date as base
 
   // Handle CURRENT_DATE and CURRENT_DATE with interval
   const intervalMatch = normalizedInput.match(/^CURRENT_DATE\s*([+-])\s*INTERVAL\s*'(\d+)\s+(DAY|DAYS)'$/);
@@ -543,71 +544,157 @@ export async function executeQuery(query: DatabaseQuery) {
 
       // Apply conditions
       if (conditions) {
-        for (const [key, condition] of Object.entries(conditions)) {
-          if (condition && typeof condition === 'object' && 'operator' in condition && 'value' in condition) {
-            const { operator, value } = condition as { operator: string; value: unknown };
-            
-            switch (operator.toUpperCase()) {
-              case '=':
-                if (value === null) {
-                  finalQuery = finalQuery.is(key, null);
-                } else if (value !== undefined) {
-                  finalQuery = finalQuery.eq(key, value);
-                }
-                break;
-              case 'IN':
-                finalQuery = finalQuery.in(key, Array.isArray(value) ? value : [value]);
-                break;
-              case 'LIKE':
-                finalQuery = finalQuery.ilike(key, `%${value}%`);
-                break;
-              case 'BETWEEN':
-                // For BETWEEN, value should be a string with AND separated values
-                if (typeof value === 'string') {
-                  const parts = value.split(/\s+AND\s+/i).map((v: string) => v.trim());
-                  if (parts.length !== 2) {
-                    console.warn(`Invalid BETWEEN format: ${value}`);
-                    throw new Error(`Invalid BETWEEN format: ${value}`);
+        // Check if we need to use OR logic between conditions
+        const useOrLogic = query.conditionLogic === 'OR';
+        
+        if (useOrLogic) {
+          // For OR logic, we need to build an OR filter using .or(...)
+          // First, we need to construct the filter expressions
+          const orFilters: string[] = [];
+          
+          for (const [key, condition] of Object.entries(conditions)) {
+            if (condition && typeof condition === 'object' && 'operator' in condition && 'value' in condition) {
+              const { operator, value } = condition as { operator: string; value: unknown };
+              
+              // Build the filter string based on the operator
+              switch (operator.toUpperCase()) {
+                case '=':
+                  if (value === null) {
+                    orFilters.push(`${key}.is.null`);
+                  } else if (value !== undefined) {
+                    orFilters.push(`${key}.eq.${JSON.stringify(value)}`);
                   }
-                  const [startStr, endStr] = parts;
-                  const startDate = parseSQLiteDate(startStr);
-                  const endDate = parseSQLiteDate(endStr);
-                  finalQuery = finalQuery.gte(key, startDate).lte(key, endDate);
-                } else {
-                  console.warn(`Unsupported value type for BETWEEN operator: ${typeof value} for key ${key}`);
-                  // Optionally, throw an error or handle as a non-match
-                }
-                break;
-              case '>':
-                finalQuery = finalQuery.gt(key, value);
-                break;
-              case '>=':
-                finalQuery = finalQuery.gte(key, value);
-                break;
-              case '<':
-                finalQuery = finalQuery.lt(key, value);
-                break;
-              case '<=':
-                finalQuery = finalQuery.lte(key, value);
-                break;
-              case '!=':
-              case '<>':
-                if (value === null) {
-                  finalQuery = finalQuery.not(key, 'is', null);
-                } else {
-                  finalQuery = finalQuery.neq(key, value);
-                }
-                break;
-              default:
-                console.warn(`Unsupported operator: ${operator}`);
-                if (value !== undefined) {
-                  finalQuery = finalQuery.eq(key, value);
-                }
+                  break;
+                case 'IN':
+                  orFilters.push(`${key}.in.${JSON.stringify(Array.isArray(value) ? value : [value])}`);
+                  break;
+                case 'LIKE':
+                  orFilters.push(`${key}.ilike.${JSON.stringify(`%${value}%`)}`);
+                  break;
+                case 'BETWEEN':
+                  // For BETWEEN with OR logic, we need to handle this specially
+                  if (typeof value === 'string') {
+                    const parts = value.split(/\s+AND\s+/i).map((v: string) => v.trim());
+                    if (parts.length !== 2) {
+                      console.warn(`Invalid BETWEEN format: ${value}`);
+                      throw new Error(`Invalid BETWEEN format: ${value}`);
+                    }
+                    const [startStr, endStr] = parts;
+                    const startDate = parseSQLiteDate(startStr);
+                    const endDate = parseSQLiteDate(endStr);
+                    // Add two conditions for BETWEEN
+                    orFilters.push(`${key}.gte.${JSON.stringify(startDate)}`);
+                    orFilters.push(`${key}.lte.${JSON.stringify(endDate)}`);
+                  } else {
+                    console.warn(`Unsupported value type for BETWEEN operator: ${typeof value} for key ${key}`);
+                  }
+                  break;
+                case '>':
+                  orFilters.push(`${key}.gt.${JSON.stringify(value)}`);
+                  break;
+                case '>=':
+                  orFilters.push(`${key}.gte.${JSON.stringify(value)}`);
+                  break;
+                case '<':
+                  orFilters.push(`${key}.lt.${JSON.stringify(value)}`);
+                  break;
+                case '<=':
+                  orFilters.push(`${key}.lte.${JSON.stringify(value)}`);
+                  break;
+                case '!=':
+                case '<>':
+                  if (value === null) {
+                    orFilters.push(`${key}.not.is.null`);
+                  } else {
+                    orFilters.push(`${key}.neq.${JSON.stringify(value)}`);
+                  }
+                  break;
+                default:
+                  console.warn(`Unsupported operator: ${operator}`);
+                  if (value !== undefined) {
+                    orFilters.push(`${key}.eq.${JSON.stringify(value)}`);
+                  }
+              }
+            } else {
+              // Fallback to simple equality check for non-object conditions
+              if (condition !== undefined) {
+                orFilters.push(`${key}.eq.${JSON.stringify(condition)}`);
+              }
             }
-          } else {
-            // Fallback to simple equality check for non-object conditions
-            if (condition !== undefined) {
-              finalQuery = finalQuery.eq(key, condition);
+          }
+          
+          // Apply the OR filter if we have any conditions
+          if (orFilters.length > 0) {
+            finalQuery = finalQuery.or(orFilters.join(','));
+          }
+        } else {
+          // Standard AND logic (existing implementation)
+          for (const [key, condition] of Object.entries(conditions)) {
+            if (condition && typeof condition === 'object' && 'operator' in condition && 'value' in condition) {
+              const { operator, value } = condition as { operator: string; value: unknown };
+              
+              switch (operator.toUpperCase()) {
+                case '=':
+                  if (value === null) {
+                    finalQuery = finalQuery.is(key, null);
+                  } else if (value !== undefined) {
+                    finalQuery = finalQuery.eq(key, value);
+                  }
+                  break;
+                case 'IN':
+                  finalQuery = finalQuery.in(key, Array.isArray(value) ? value : [value]);
+                  break;
+                case 'LIKE':
+                  finalQuery = finalQuery.ilike(key, `%${value}%`);
+                  break;
+                case 'BETWEEN':
+                  // For BETWEEN, value should be a string with AND separated values
+                  if (typeof value === 'string') {
+                    const parts = value.split(/\s+AND\s+/i).map((v: string) => v.trim());
+                    if (parts.length !== 2) {
+                      console.warn(`Invalid BETWEEN format: ${value}`);
+                      throw new Error(`Invalid BETWEEN format: ${value}`);
+                    }
+                    const [startStr, endStr] = parts;
+                    const startDate = parseSQLiteDate(startStr);
+                    const endDate = parseSQLiteDate(endStr);
+                    finalQuery = finalQuery.gte(key, startDate).lte(key, endDate);
+                  } else {
+                    console.warn(`Unsupported value type for BETWEEN operator: ${typeof value} for key ${key}`);
+                    // Optionally, throw an error or handle as a non-match
+                  }
+                  break;
+                case '>':
+                  finalQuery = finalQuery.gt(key, value);
+                  break;
+                case '>=':
+                  finalQuery = finalQuery.gte(key, value);
+                  break;
+                case '<':
+                  finalQuery = finalQuery.lt(key, value);
+                  break;
+                case '<=':
+                  finalQuery = finalQuery.lte(key, value);
+                  break;
+                case '!=':
+                case '<>':
+                  if (value === null) {
+                    finalQuery = finalQuery.not(key, 'is', null);
+                  } else {
+                    finalQuery = finalQuery.neq(key, value);
+                  }
+                  break;
+                default:
+                  console.warn(`Unsupported operator: ${operator}`);
+                  if (value !== undefined) {
+                    finalQuery = finalQuery.eq(key, value);
+                  }
+              }
+            } else {
+              // Fallback to simple equality check for non-object conditions
+              if (condition !== undefined) {
+                finalQuery = finalQuery.eq(key, condition);
+              }
             }
           }
         }

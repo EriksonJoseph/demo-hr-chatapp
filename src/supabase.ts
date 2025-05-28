@@ -8,6 +8,15 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
 export type Database = {
   public: {
     Tables: {
+      tokens: {
+        Row: {
+          token_id: string
+          total_questions: number
+          questions: string | null
+          created_at: string
+          updated_at: string
+        }
+      },
       employees: {
         Row: {
           emp_id: number

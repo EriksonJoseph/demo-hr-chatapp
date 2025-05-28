@@ -51,6 +51,25 @@ export async function POST(req: NextRequest) {
     // Parse natural language query into database query
     const queryStructure = await parseNaturalLanguageQuery(message)
     
+    // Check if this is a query searching for a name in both first_name and last_name
+    // If so, use OR logic between these conditions
+    if (queryStructure.table === 'employees' && 
+        queryStructure.conditions && 
+        queryStructure.conditions.first_name && 
+        queryStructure.conditions.last_name && 
+        typeof queryStructure.conditions.first_name === 'object' && 
+        typeof queryStructure.conditions.last_name === 'object' && 
+        'operator' in queryStructure.conditions.first_name && 
+        'operator' in queryStructure.conditions.last_name && 
+        'value' in queryStructure.conditions.first_name && 
+        'value' in queryStructure.conditions.last_name && 
+        queryStructure.conditions.first_name.operator === 'LIKE' && 
+        queryStructure.conditions.last_name.operator === 'LIKE' && 
+        queryStructure.conditions.first_name.value === queryStructure.conditions.last_name.value) {
+      // Set conditionLogic to OR when searching for the same value in both first_name and last_name
+      queryStructure.conditionLogic = 'OR'
+    }
+    
     // Handle personal questions asked when employeeId is null (e.g., admin context)
     if (isPersonalQuestion && !employeeId) {
       // The user's message implies a query about "themselves" (e.g., "my leave"),
