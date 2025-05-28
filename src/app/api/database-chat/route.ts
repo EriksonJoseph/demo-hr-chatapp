@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { parseNaturalLanguageQuery, formatResultsAsNaturalLanguage } from "@/nl-processor"
 import { executeQuery, DatabaseQuery } from "@/database-helper"
+import { supabase } from '@/supabase'; // Added import for supabase
 
 // Regular expressions to identify personal questions
 const PERSONAL_QUESTION_PATTERNS = [
@@ -22,7 +23,7 @@ const OTHER_EMPLOYEE_PATTERNS = [
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, employeeId } = await req.json()
+    const { message, employeeId, tokenId } = await req.json() // Added tokenId
     console.log("message: ", message)
     console.log("employeeId: ", employeeId)
 
@@ -139,6 +140,42 @@ export async function POST(req: NextRequest) {
     // Handle potentially null results from executeQuery
     const safeResults = results === null ? [] : results;
     const resultsCount = results === null ? 0 : results.length;
+
+    // Update token if tokenId is provided and processing was successful
+    if (tokenId) {
+      try {
+        const { data: tokenData, error: tokenError } = await supabase
+          .from('tokens')
+          .select('total_questions, questions')
+          .eq('token_id', tokenId)
+          .single();
+
+        if (tokenError) {
+          console.error('Error fetching token for update:', tokenError);
+          // Decide if this should be a critical error or just a log
+        } else if (tokenData) {
+          const newTotalQuestions = tokenData.total_questions > 0 ? tokenData.total_questions - 1 : 0;
+          const newQuestions = tokenData.questions 
+            ? `${tokenData.questions}|||${message}` 
+            : message;
+
+          const { error: updateError } = await supabase
+            .from('tokens')
+            .update({ 
+              total_questions: newTotalQuestions,
+              questions: newQuestions,
+              updated_at: new Date().toISOString() // Also update updated_at
+            })
+            .eq('token_id', tokenId);
+
+          if (updateError) {
+            console.error('Error updating token:', updateError);
+          }
+        }
+      } catch (err) {
+        console.error('Exception during token update:', err);
+      }
+    }
 
     // Format results as natural language
     const naturalLanguageResponse = await formatResultsAsNaturalLanguage(

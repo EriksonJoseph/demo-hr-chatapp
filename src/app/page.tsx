@@ -3,6 +3,7 @@
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { supabase } from "../supabase"
 import TypingAnimation from "@/components/TypingAnimation"
+import TokenVerification from "@/components/TokenVerification"; // Added import
 
 interface Message {
   id: string
@@ -28,6 +29,12 @@ export default function ChatPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  // State for token management
+  const [tokenId, setTokenId] = useState<string>("");
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [remainingQuestions, setRemainingQuestions] = useState<number>(0);
+  const [questionsLog, setQuestionsLog] = useState<string>("");
   
   const messagesEndRef = useRef<null | HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -41,6 +48,15 @@ export default function ChatPage() {
   useEffect(scrollToBottom, [messages])
   
   // Fetch employees data on component mount
+  useEffect(() => {
+    // Attempt to load token from localStorage on initial mount
+    const storedToken = localStorage.getItem('hrChatToken');
+    if (storedToken) {
+      setTokenId(storedToken);
+      // TokenVerification component will handle actual verification using this initial tokenId
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchEmployees() {
       try {
@@ -83,7 +99,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ 
           message: input,
-          employeeId: selectedEmployee?.emp_id || null
+          employeeId: selectedEmployee?.emp_id || null,
+          tokenId: chatMode === "database" ? tokenId : undefined // Send tokenId for database chat
         }),
       })
       if (!response.ok) {
@@ -146,7 +163,8 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ 
           message: question,
-          employeeId: selectedEmployee?.emp_id || null
+          employeeId: selectedEmployee?.emp_id || null,
+          tokenId: chatMode === "database" ? tokenId : undefined // Send tokenId for database chat
         }),
       })
       .then(response => {
@@ -206,6 +224,20 @@ export default function ChatPage() {
     "แผนกไหนเงินเดือนเฉลี่ยเยอะสุด",
     "วันที่ 25 พฤษภาคม สมชายทำงานหรือไม่"
   ]
+
+  if (!isVerified) {
+    return (
+      <TokenVerification
+        isVerified={isVerified}
+        setIsVerified={setIsVerified}
+        tokenId={tokenId}
+        setTokenId={setTokenId}
+        remainingQuestions={remainingQuestions}
+        setRemainingQuestions={setRemainingQuestions}
+        setQuestions={setQuestionsLog} // This prop was named setQuestions in TokenVerificationProps
+      />
+    );
+  }
 
   return (
     <div className="flex h-full bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white overflow-hidden">
